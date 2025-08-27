@@ -1,4 +1,13 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+
+# Install python3, pip, and youtube-dl
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    && pip3 install youtube-dl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
