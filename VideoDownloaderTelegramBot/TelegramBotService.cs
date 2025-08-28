@@ -2,15 +2,13 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using VideoDownloaderTelegramBot.Services.Interfaces;
-using SystemFile = System.IO.File;
+using VideoDownloaderTelegramBot.Commands;
 
 namespace VideoDownloaderTelegramBot;
 
 public class TelegramBotService(
     ITelegramBotClient botClient,
-    IUrlValidationService urlValidationService,
-    IVideoDownloadService videoDownloadService,
+    IEnumerable<IMessageCommand> commands,
     ILogger<TelegramBotService> logger)
     : BackgroundService
 {
@@ -20,7 +18,7 @@ public class TelegramBotService(
 
         var receiverOptions = new ReceiverOptions
         {
-            AllowedUpdates = [UpdateType.Message]
+            AllowedUpdates = [UpdateType.Message, UpdateType.ChatMember]
         };
 
         await botClient.ReceiveAsync(
@@ -32,80 +30,19 @@ public class TelegramBotService(
 
     private async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
     {
-        if (update.Message is not { Text: { } messageText } message)
+        if (update.Message is not { Text: { } _ } message)
             return;
 
         var chatId = message.Chat.Id;
-        logger.LogInformation("Received message '{MessageText}' from chat {ChatId}", messageText, chatId);
+        logger.LogInformation("Received message '{MessageText}' from chat {ChatId}", message.Text, chatId);
 
-        if (messageText.StartsWith("/start"))
+        foreach (var command in commands)
         {
-            var welcomeText = "Welcome to the Video Downloader Bot! Send me a video URL, and I'll download it for you.";
-            await client.SendMessage(chatId, welcomeText, cancellationToken: cancellationToken);
+            if (!command.CanHandle(message))
+                continue;
+            
+            await command.HandleAsync(client, message, cancellationToken);
             return;
-        }
-        
-        if (Uri.IsWellFormedUriString(messageText, UriKind.Absolute))
-        {
-            var startMessage = await client.SendMessage(chatId, "Downloading your video...", cancellationToken: cancellationToken);
-
-            var textValidation = urlValidationService.IsValidUrl(messageText);
-
-            if (!textValidation)
-            {
-                await client.SendMessage(
-                    chatId, 
-                    "The URL you provided is not valid. Please check and try again.",
-                    messageThreadId: startMessage.MessageThreadId,
-                    cancellationToken: cancellationToken);
-                return;
-            }
-            
-            var platformSupport = urlValidationService.IsSupportedPlatform(messageText);
-            if (!platformSupport)
-            {
-                var supportedPlatforms = urlValidationService.GetSupportedPlatformsList();
-                await client.SendMessage(chatId,
-                    $"Sorry, this platform is not supported.\n\n{supportedPlatforms}",
-                    messageThreadId: startMessage.MessageThreadId,
-                    cancellationToken: cancellationToken);
-                return;
-            }
-            
-            var downloadResult = await videoDownloadService.DownloadVideoAsync(messageText, cancellationToken);
-            if (downloadResult is { Success: true, FilePath: not null })
-            {
-                await using (var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    await client.SendVideo(
-                        chatId: chatId,
-                        video: InputFile.FromStream(fileStream),
-                        messageThreadId: startMessage.MessageThreadId,
-                        cancellationToken: cancellationToken);
-                }
-
-                try
-                {
-                    SystemFile.Delete(downloadResult.FilePath);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to delete temporary file {FilePath}", downloadResult.FilePath);
-                }
-            }
-            else
-            {
-                var errorMessage = downloadResult.ErrorMessage ?? "An unknown error occurred during the download.";
-                await client.SendMessage(
-                    chatId,
-                    $"Download failed: {errorMessage}",
-                    messageThreadId: startMessage.MessageThreadId,
-                    cancellationToken: cancellationToken);
-            }
-        }
-        else
-        {
-            await client.SendMessage(chatId, "Please send a valid video URL.", cancellationToken: cancellationToken);
         }
     }
 

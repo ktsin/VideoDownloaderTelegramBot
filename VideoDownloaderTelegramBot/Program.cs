@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using VideoDownloaderTelegramBot;
+using VideoDownloaderTelegramBot.Commands;
 using VideoDownloaderTelegramBot.Services;
 using VideoDownloaderTelegramBot.Services.Interfaces;
 using YoutubeDLSharp;
@@ -11,6 +12,11 @@ var botToken = builder.Configuration["TelegramBot:Token"] ??
 
 builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken));
 builder.Services.AddHostedService<TelegramBotService>();
+
+// Register commands
+builder.Services.AddSingleton<IMessageCommand, StartCommand>();
+builder.Services.AddSingleton<IMessageCommand, DownloadVideoCommand>();
+builder.Services.AddSingleton<IMessageCommand, FallbackInvalidInputCommand>();
 builder.Services.AddSingleton<IUrlValidationService, UrlValidationService>();
 builder.Services.AddSingleton<IVideoDownloadService, VideoDownloadService>();
 builder.Services.AddSingleton<YoutubeDL>(_ =>
