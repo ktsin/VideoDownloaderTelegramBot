@@ -4,6 +4,7 @@
 RUN apt update && apt install -y \
     python3-full \
     python3-pip \
+    ffmpeg \
     && pip3 install --break-system-packages youtube-dl
 
 USER $APP_UID
@@ -13,10 +14,6 @@ EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
-
-RUN apt-get update && apt-get install -y \
-    clang \
-    zlib1g-dev
 
 WORKDIR /src
 COPY ["VideoDownloaderTelegramBot/VideoDownloaderTelegramBot.csproj", "VideoDownloaderTelegramBot/"]
