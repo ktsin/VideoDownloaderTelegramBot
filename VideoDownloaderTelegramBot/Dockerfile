@@ -27,8 +27,7 @@ RUN dotnet build "./VideoDownloaderTelegramBot.csproj" -c $BUILD_CONFIGURATION -
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-ARG RUNTIME_IDENTIFIER=linux-arm64
-RUN dotnet publish "./VideoDownloaderTelegramBot.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false -r $RUNTIME_IDENTIFIER --self-contained true
+RUN dotnet publish "./VideoDownloaderTelegramBot.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
