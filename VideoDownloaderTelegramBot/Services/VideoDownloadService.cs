@@ -1,3 +1,4 @@
+using VideoDownloaderTelegramBot.Services.Interfaces;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Options;
 
@@ -38,7 +39,7 @@ public class VideoDownloadService : IVideoDownloadService
 
             _logger.LogInformation("Starting video download from {Url}", url);
 
-            var result = await _youtubeDL.RunVideoDataFetch(url, ct: cancellationToken);
+            var result = await _youtubeDL.RunVideoDataFetch(url, overrideOptions: options, ct: cancellationToken);
             
             if (!result.Success)
             {
@@ -47,10 +48,10 @@ public class VideoDownloadService : IVideoDownloadService
             }
 
             var videoData = result.Data;
-            var title = videoData.Title ?? "video";
             var ext = videoData.Extension ?? "mp4";
-            var fileName = $"{SanitizeFileName(title)}.{ext}";
-            Path.Combine(_downloadPath, fileName);
+            var fileName = $"{Guid.CreateVersion7():D}.{ext}";
+            var filePath = Path.GetFullPath(Path.Combine(_downloadPath, fileName));
+            options.Output = filePath;
 
             var downloadResult = await _youtubeDL.RunVideoDownload(url, overrideOptions: options, ct: cancellationToken);
 
@@ -59,23 +60,18 @@ public class VideoDownloadService : IVideoDownloadService
                 _logger.LogError("Download failed: {Error}", string.Join("; ", downloadResult.ErrorOutput));
                 return new VideoDownloadResult(false, null, "Can't download video");
             }
-            
-            var downloadedFiles = Directory.GetFiles(_downloadPath, $"{SanitizeFileName(title)}.*")
-                .Where(File.Exists)
-                .ToArray();
 
-            if (downloadedFiles.Length == 0)
+            if (!Path.Exists(filePath))
             {
                 _logger.LogError("Downloaded file not found");
                 return new VideoDownloadResult(false, null, "Downloaded file not found");
             }
 
-            var downloadedFile = downloadedFiles[0];
-            var fileSize = new FileInfo(downloadedFile).Length;
+            var fileSize = new FileInfo(filePath).Length;
 
-            _logger.LogInformation("Video downloaded successfully: {FilePath}, Size: {Size} bytes", downloadedFile, fileSize);
+            _logger.LogInformation("Video downloaded successfully: {FilePath}, Size: {Size} bytes", filePath, fileSize);
 
-            return new VideoDownloadResult(true, downloadedFile, null, fileSize);
+            return new VideoDownloadResult(true, filePath, null, fileSize);
         }
         catch (OperationCanceledException ex)
         {
@@ -87,12 +83,5 @@ public class VideoDownloadService : IVideoDownloadService
             _logger.LogError(ex, "Error downloading video from {Url}", url);
             return new VideoDownloadResult(false, null, $"Error downloading video has occured: {ex.Message}");
         }
-    }
-
-    private static string SanitizeFileName(string fileName)
-    {
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
-        return sanitized.Length > 100 ? sanitized[..100] : sanitized;
     }
 }

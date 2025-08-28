@@ -2,7 +2,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using VideoDownloaderTelegramBot.Services;
+using VideoDownloaderTelegramBot.Services.Interfaces;
 using SystemFile = System.IO.File;
 
 namespace VideoDownloaderTelegramBot;
@@ -30,9 +30,9 @@ public class TelegramBotService(
             cancellationToken: stoppingToken);
     }
 
-    private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+    private async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
     {
-        if (update.Message is not { } message || message.Text is not { } messageText)
+        if (update.Message is not { Text: { } messageText } message)
             return;
 
         var chatId = message.Chat.Id;
@@ -41,19 +41,23 @@ public class TelegramBotService(
         if (messageText.StartsWith("/start"))
         {
             var welcomeText = "Welcome to the Video Downloader Bot! Send me a video URL, and I'll download it for you.";
-            await botClient.SendMessage(chatId, welcomeText, cancellationToken: cancellationToken);
+            await client.SendMessage(chatId, welcomeText, cancellationToken: cancellationToken);
             return;
         }
         
         if (Uri.IsWellFormedUriString(messageText, UriKind.Absolute))
         {
-            await botClient.SendMessage(chatId, "Downloading your video...", cancellationToken: cancellationToken);
+            var startMessage = await client.SendMessage(chatId, "Downloading your video...", cancellationToken: cancellationToken);
 
             var textValidation = urlValidationService.IsValidUrl(messageText);
 
             if (!textValidation)
             {
-                await botClient.SendMessage(chatId, "The URL you provided is not valid. Please check and try again.", cancellationToken: cancellationToken);
+                await client.SendMessage(
+                    chatId, 
+                    "The URL you provided is not valid. Please check and try again.",
+                    messageThreadId: startMessage.MessageThreadId,
+                    cancellationToken: cancellationToken);
                 return;
             }
             
@@ -61,20 +65,24 @@ public class TelegramBotService(
             if (!platformSupport)
             {
                 var supportedPlatforms = urlValidationService.GetSupportedPlatformsList();
-                await botClient.SendMessage(chatId, $"Sorry, this platform is not supported.\n\n{supportedPlatforms}", cancellationToken: cancellationToken);
+                await client.SendMessage(chatId,
+                    $"Sorry, this platform is not supported.\n\n{supportedPlatforms}",
+                    messageThreadId: startMessage.MessageThreadId,
+                    cancellationToken: cancellationToken);
                 return;
             }
             
             var downloadResult = await videoDownloadService.DownloadVideoAsync(messageText, cancellationToken);
             if (downloadResult is { Success: true, FilePath: not null })
             {
-                await using var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                var fileName = Path.GetFileName(downloadResult.FilePath);
-                await botClient.SendVideo(
-                    chatId: chatId,
-                    video: InputFile.FromStream(fileStream),
-                    caption: fileName,
-                    cancellationToken: cancellationToken);
+                await using (var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    await client.SendVideo(
+                        chatId: chatId,
+                        video: InputFile.FromStream(fileStream),
+                        messageThreadId: startMessage.MessageThreadId,
+                        cancellationToken: cancellationToken);
+                }
 
                 try
                 {
@@ -88,12 +96,16 @@ public class TelegramBotService(
             else
             {
                 var errorMessage = downloadResult.ErrorMessage ?? "An unknown error occurred during the download.";
-                await botClient.SendMessage(chatId, $"Download failed: {errorMessage}", cancellationToken: cancellationToken);
+                await client.SendMessage(
+                    chatId,
+                    $"Download failed: {errorMessage}",
+                    messageThreadId: startMessage.MessageThreadId,
+                    cancellationToken: cancellationToken);
             }
         }
         else
         {
-            await botClient.SendMessage(chatId, "Please send a valid video URL.", cancellationToken: cancellationToken);
+            await client.SendMessage(chatId, "Please send a valid video URL.", cancellationToken: cancellationToken);
         }
     }
 

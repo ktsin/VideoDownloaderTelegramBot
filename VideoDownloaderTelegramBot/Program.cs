@@ -1,6 +1,7 @@
 using Telegram.Bot;
 using VideoDownloaderTelegramBot;
 using VideoDownloaderTelegramBot.Services;
+using VideoDownloaderTelegramBot.Services.Interfaces;
 using YoutubeDLSharp;
 
 var builder = WebApplication.CreateSlimBuilder(args);

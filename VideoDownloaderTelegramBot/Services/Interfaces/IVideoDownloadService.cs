@@ -1,4 +1,4 @@
-namespace VideoDownloaderTelegramBot.Services;
+namespace VideoDownloaderTelegramBot.Services.Interfaces;
 
 public interface IVideoDownloadService
 {
