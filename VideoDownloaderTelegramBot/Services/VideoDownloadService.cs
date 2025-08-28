@@ -5,12 +5,17 @@ namespace VideoDownloaderTelegramBot.Services;
 
 public class VideoDownloadService : IVideoDownloadService
 {
+    private readonly YoutubeDL _youtubeDL;
     private readonly ILogger<VideoDownloadService> _logger;
     private readonly string _downloadPath;
     private readonly string _downloadSizeLimit;
 
-    public VideoDownloadService(ILogger<VideoDownloadService> logger, IConfiguration configuration)
+    public VideoDownloadService(
+        YoutubeDL ytdl,
+        ILogger<VideoDownloadService> logger, 
+        IConfiguration configuration)
     {
+        _youtubeDL = ytdl;
         _logger = logger;
         _downloadPath = configuration["VideoDownload:Path"] ?? Path.Combine(Path.GetTempPath(), "bot_downloads");
         _downloadSizeLimit = configuration["VideoDownload:SizeLimit"] ?? "100M";
@@ -22,8 +27,6 @@ public class VideoDownloadService : IVideoDownloadService
     {
         try
         {
-            var ytdl = new YoutubeDL();
-            
             var options = new OptionSet
             {
                 Format = "best[height<=720]/best",
@@ -35,7 +38,7 @@ public class VideoDownloadService : IVideoDownloadService
 
             _logger.LogInformation("Starting video download from {Url}", url);
 
-            var result = await ytdl.RunVideoDataFetch(url, ct: cancellationToken);
+            var result = await _youtubeDL.RunVideoDataFetch(url, ct: cancellationToken);
             
             if (!result.Success)
             {
@@ -47,9 +50,9 @@ public class VideoDownloadService : IVideoDownloadService
             var title = videoData.Title ?? "video";
             var ext = videoData.Extension ?? "mp4";
             var fileName = $"{SanitizeFileName(title)}.{ext}";
-            var filePath = Path.Combine(_downloadPath, fileName);
+            Path.Combine(_downloadPath, fileName);
 
-            var downloadResult = await ytdl.RunVideoDownload(url, overrideOptions: options, ct: cancellationToken);
+            var downloadResult = await _youtubeDL.RunVideoDownload(url, overrideOptions: options, ct: cancellationToken);
 
             if (!downloadResult.Success)
             {
@@ -74,9 +77,9 @@ public class VideoDownloadService : IVideoDownloadService
 
             return new VideoDownloadResult(true, downloadedFile, null, fileSize);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            _logger.LogInformation("Download was cancelled");
+            _logger.LogInformation(ex, "Download was cancelled");
             return new VideoDownloadResult(false, null, "Download cancelled");
         }
         catch (Exception ex)

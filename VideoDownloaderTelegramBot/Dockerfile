@@ -5,7 +5,7 @@ RUN apt update && apt install -y \
     python3-full \
     python3-pip \
     ffmpeg \
-    && pip3 install --break-system-packages youtube-dl
+    && pip3 install --break-system-packages -U --pre "yt-dlp[default]"
 
 USER $APP_UID
 WORKDIR /app
