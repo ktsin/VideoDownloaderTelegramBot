@@ -29,9 +29,9 @@ builder.Services.AddHostedService<TelegramBotService>();
 builder.Services.AddHostedService<FileCleanupBackgroundService>();
 
 // Register commands
-builder.Services.AddSingleton<IMessageCommand, StartCommand>();
-builder.Services.AddSingleton<IMessageCommand, DownloadVideoCommand>();
-builder.Services.AddSingleton<IMessageCommand, FallbackInvalidInputCommand>();
+builder.Services.AddScoped<IMessageCommand, StartCommand>();
+builder.Services.AddScoped<IMessageCommand, DownloadVideoCommand>();
+builder.Services.AddScoped<IMessageCommand, FallbackInvalidInputCommand>();
 builder.Services.AddSingleton<IUrlValidationService, UrlValidationService>();
 builder.Services.AddScoped<IVideoDownloadService, VideoDownloadService>();
 builder.Services.AddScoped<FileTokenService>();

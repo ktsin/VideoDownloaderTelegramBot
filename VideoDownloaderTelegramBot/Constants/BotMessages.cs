@@ -8,5 +8,6 @@ public static class BotMessages
     public const string InvalidUrl = "The URL you provided is not valid. Please check and try again.";
     public const string UnsupportedPlatformPrefix = "Sorry, this platform is not supported.\n\n";
     public const string UnknownDownloadError = "An unknown error occurred during the download.";
+    public const string FileTooLargeForTelegram = "The video file is too large to send directly through Telegram (>50MB). You can download it using this link:\n\n{0}";
 }
 

@@ -5,6 +5,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using VideoDownloaderTelegramBot.Constants;
+using VideoDownloaderTelegramBot.Services;
 using VideoDownloaderTelegramBot.Services.Interfaces;
 
 namespace VideoDownloaderTelegramBot.Commands;
@@ -12,6 +13,7 @@ namespace VideoDownloaderTelegramBot.Commands;
 public class DownloadVideoCommand(
     IUrlValidationService urlValidationService,
     IVideoDownloadService videoDownloadService,
+    FileStorageService fileStorageService,
     ILogger<DownloadVideoCommand> logger
 ) : IMessageCommand
 {
@@ -49,22 +51,45 @@ public class DownloadVideoCommand(
         var downloadResult = await videoDownloadService.DownloadVideoAsync(messageText, cancellationToken);
         if (downloadResult is { Success: true, FilePath: not null })
         {
-            await using (var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            var fileInfo = new FileInfo(downloadResult.FilePath);
+
+            // Check if file is larger than Telegram's limit (50 MB)
+            if (fileInfo.Length > FileConstants.TelegramMaxFileSizeBytes)
             {
-                await client.SendVideo(
-                    chatId: chatId,
-                    video: InputFile.FromStream(fileStream),
+                // Store file and generate download link
+                var (videoFile, downloadUrl) = await fileStorageService.SaveVideoFileAsync(
+                    downloadResult.FilePath,
+                    Path.GetFileName(downloadResult.FilePath),
+                    messageText,
+                    message.From?.Id ?? 0,
+                    cancellationToken);
+
+                await client.SendMessage(
+                    chatId,
+                    string.Format(BotMessages.FileTooLargeForTelegram, downloadUrl),
                     messageThreadId: startMessage.MessageThreadId,
                     cancellationToken: cancellationToken);
             }
+            else
+            {
+                // Send directly through Telegram
+                await using (var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    await client.SendVideo(
+                        chatId: chatId,
+                        video: InputFile.FromStream(fileStream),
+                        messageThreadId: startMessage.MessageThreadId,
+                        cancellationToken: cancellationToken);
+                }
 
-            try
-            {
-                File.Delete(downloadResult.FilePath);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to delete temporary file {FilePath}", downloadResult.FilePath);
+                try
+                {
+                    File.Delete(downloadResult.FilePath);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to delete temporary file {FilePath}", downloadResult.FilePath);
+                }
             }
         }
         else
