@@ -52,7 +52,7 @@ public class FileStorageService
             FileName = fileName,
             FilePath = storedFileName,
             FileSizeBytes = fileInfo.Length,
-            ContentType = GetContentType(fileExtension),
+            ContentType = GetContentType(Path.GetExtension(sourceFilePath)),
             SourceUrl = sourceUrl,
             TelegramUserId = telegramUserId,
             CreatedAt = DateTime.UtcNow,

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using VideoDownloaderTelegramBot.Services;
 
 namespace VideoDownloaderTelegramBot.Endpoints;
@@ -10,17 +11,14 @@ public static class FileDownloadEndpoints
     /// <summary>
     /// Maps file download endpoints to the application
     /// </summary>
-    public static IEndpointRouteBuilder MapFileDownloadEndpoints(this IEndpointRouteBuilder app)
+    public static void MapFileDownloadEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/download");
 
         group.MapGet("/{token}", HandleFileDownloadAsync)
             .WithName("DownloadFile")
-            .WithOpenApi()
-            .Produces<FileStreamHttpResult>(StatusCodes.Status200OK)
+            .Produces<FileStreamHttpResult>()
             .Produces<ProblemHttpResult>(StatusCodes.Status404NotFound);
-
-        return app;
     }
 
     /// <summary>
