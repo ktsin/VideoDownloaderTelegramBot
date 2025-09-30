@@ -1,3 +1,4 @@
+using VideoDownloaderTelegramBot.Constants;
 using VideoDownloaderTelegramBot.Services.Interfaces;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Options;
@@ -8,23 +9,26 @@ public class VideoDownloadService : IVideoDownloadService
 {
     private readonly YoutubeDL _youtubeDL;
     private readonly ILogger<VideoDownloadService> _logger;
+    private readonly FileStorageService _fileStorageService;
     private readonly string _downloadPath;
     private readonly string _downloadSizeLimit;
 
     public VideoDownloadService(
         YoutubeDL ytdl,
-        ILogger<VideoDownloadService> logger, 
-        IConfiguration configuration)
+        ILogger<VideoDownloadService> logger,
+        IConfiguration configuration,
+        FileStorageService fileStorageService)
     {
         _youtubeDL = ytdl;
         _logger = logger;
+        _fileStorageService = fileStorageService;
         _downloadPath = configuration["VideoDownload:Path"] ?? Path.Combine(Path.GetTempPath(), "bot_downloads");
         _downloadSizeLimit = configuration["VideoDownload:SizeLimit"] ?? "100M";
 
         Directory.CreateDirectory(_downloadPath);
     }
 
-    public async Task<VideoDownloadResult> DownloadVideoAsync(string url, CancellationToken cancellationToken = default)
+    public async Task<VideoDownloadResult> DownloadVideoAsync(string url, long telegramUserId, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -71,7 +75,23 @@ public class VideoDownloadService : IVideoDownloadService
 
             _logger.LogInformation("Video downloaded successfully: {FilePath}, Size: {Size} bytes", filePath, fileSize);
 
-            return new VideoDownloadResult(true, filePath, null, fileSize);
+            // Check if file exceeds Telegram upload limit
+            string? downloadUrl = null;
+            if (fileSize > FileConstants.TelegramMaxFileSizeBytes)
+            {
+                _logger.LogInformation("File size {Size} exceeds Telegram limit, creating download link", fileSize);
+
+                var (_, dlUrl) = await _fileStorageService.SaveVideoFileAsync(
+                    filePath,
+                    videoData.Title ?? Path.GetFileName(filePath),
+                    url,
+                    telegramUserId,
+                    cancellationToken);
+
+                downloadUrl = dlUrl;
+            }
+
+            return new VideoDownloadResult(true, filePath, null, fileSize, downloadUrl);
         }
         catch (OperationCanceledException ex)
         {

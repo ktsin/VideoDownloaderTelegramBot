@@ -72,25 +72,40 @@ public class TelegramBotService(
                 return;
             }
             
-            var downloadResult = await videoDownloadService.DownloadVideoAsync(messageText, cancellationToken);
-            if (downloadResult is { Success: true, FilePath: not null })
+            var downloadResult = await videoDownloadService.DownloadVideoAsync(messageText, chatId, cancellationToken);
+            if (downloadResult is { Success: true })
             {
-                await using (var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                // If file is too large, send download link
+                if (downloadResult.DownloadUrl != null)
                 {
-                    await client.SendVideo(
-                        chatId: chatId,
-                        video: InputFile.FromStream(fileStream),
+                    await client.SendMessage(
+                        chatId,
+                        $"✅ Video downloaded successfully!\n\n" +
+                        $"The file is too large to send directly via Telegram (size: {downloadResult.FileSize / (1024.0 * 1024.0):F2} MB).\n\n" +
+                        $"📥 Download link (valid for 1 hour):\n{downloadResult.DownloadUrl}",
                         messageThreadId: startMessage.MessageThreadId,
                         cancellationToken: cancellationToken);
                 }
+                // Send file directly via Telegram
+                else if (downloadResult.FilePath != null)
+                {
+                    await using (var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        await client.SendVideo(
+                            chatId: chatId,
+                            video: InputFile.FromStream(fileStream),
+                            messageThreadId: startMessage.MessageThreadId,
+                            cancellationToken: cancellationToken);
+                    }
 
-                try
-                {
-                    SystemFile.Delete(downloadResult.FilePath);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to delete temporary file {FilePath}", downloadResult.FilePath);
+                    try
+                    {
+                        SystemFile.Delete(downloadResult.FilePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to delete temporary file {FilePath}", downloadResult.FilePath);
+                    }
                 }
             }
             else

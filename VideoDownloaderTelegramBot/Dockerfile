@@ -28,5 +28,13 @@ RUN dotnet publish "./VideoDownloaderTelegramBot.csproj" -c $BUILD_CONFIGURATION
 
 FROM base AS final
 WORKDIR /app
+
+# Create directory for database
+RUN mkdir -p /app/storage/database
+
 COPY --from=publish /app/publish .
+
+# Volume mount for database persistence
+VOLUME ["/app/storage/database"]
+
 ENTRYPOINT ["dotnet", "VideoDownloaderTelegramBot.dll"]
