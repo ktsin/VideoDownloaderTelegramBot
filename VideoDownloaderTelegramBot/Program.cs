@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using VideoDownloaderTelegramBot;
+using VideoDownloaderTelegramBot.Commands;
 using VideoDownloaderTelegramBot.Data;
 using VideoDownloaderTelegramBot.Endpoints;
 using VideoDownloaderTelegramBot.Services;
@@ -24,7 +25,13 @@ builder.Services.AddDbContext<VideoDownloaderDbContext>(options =>
 // Register services
 builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken));
 builder.Services.AddHostedService<TelegramBotService>();
+
 builder.Services.AddHostedService<FileCleanupBackgroundService>();
+
+// Register commands
+builder.Services.AddSingleton<IMessageCommand, StartCommand>();
+builder.Services.AddSingleton<IMessageCommand, DownloadVideoCommand>();
+builder.Services.AddSingleton<IMessageCommand, FallbackInvalidInputCommand>();
 builder.Services.AddSingleton<IUrlValidationService, UrlValidationService>();
 builder.Services.AddScoped<IVideoDownloadService, VideoDownloadService>();
 builder.Services.AddScoped<FileTokenService>();

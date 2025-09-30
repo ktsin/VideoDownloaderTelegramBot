@@ -2,15 +2,13 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using VideoDownloaderTelegramBot.Services.Interfaces;
-using SystemFile = System.IO.File;
+using VideoDownloaderTelegramBot.Commands;
 
 namespace VideoDownloaderTelegramBot;
 
 public class TelegramBotService(
     ITelegramBotClient botClient,
-    IUrlValidationService urlValidationService,
-    IVideoDownloadService videoDownloadService,
+    IEnumerable<IMessageCommand> commands,
     ILogger<TelegramBotService> logger)
     : BackgroundService
 {
@@ -20,7 +18,7 @@ public class TelegramBotService(
 
         var receiverOptions = new ReceiverOptions
         {
-            AllowedUpdates = [UpdateType.Message]
+            AllowedUpdates = [UpdateType.Message, UpdateType.ChatMember]
         };
 
         await botClient.ReceiveAsync(
@@ -32,35 +30,17 @@ public class TelegramBotService(
 
     private async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
     {
-        if (update.Message is not { Text: { } messageText } message)
+        if (update.Message is not { Text: { } _ } message)
             return;
 
         var chatId = message.Chat.Id;
-        logger.LogInformation("Received message '{MessageText}' from chat {ChatId}", messageText, chatId);
+        logger.LogInformation("Received message '{MessageText}' from chat {ChatId}", message.Text, chatId);
 
-        if (messageText.StartsWith("/start"))
+        foreach (var command in commands)
         {
-            var welcomeText = "Welcome to the Video Downloader Bot! Send me a video URL, and I'll download it for you.";
-            await client.SendMessage(chatId, welcomeText, cancellationToken: cancellationToken);
-            return;
-        }
-        
-        if (Uri.IsWellFormedUriString(messageText, UriKind.Absolute))
-        {
-            var startMessage = await client.SendMessage(chatId, "Downloading your video...", cancellationToken: cancellationToken);
+            if (!command.CanHandle(message))
+                continue;
 
-            var textValidation = urlValidationService.IsValidUrl(messageText);
-
-            if (!textValidation)
-            {
-                await client.SendMessage(
-                    chatId, 
-                    "The URL you provided is not valid. Please check and try again.",
-                    messageThreadId: startMessage.MessageThreadId,
-                    cancellationToken: cancellationToken);
-                return;
-            }
-            
             var platformSupport = urlValidationService.IsSupportedPlatform(messageText);
             if (!platformSupport)
             {
@@ -121,6 +101,9 @@ public class TelegramBotService(
         else
         {
             await client.SendMessage(chatId, "Please send a valid video URL.", cancellationToken: cancellationToken);
+
+            await command.HandleAsync(client, message, cancellationToken);
+            return;
         }
     }
 
