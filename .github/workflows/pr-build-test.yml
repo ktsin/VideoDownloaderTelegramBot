@@ -27,7 +27,7 @@ jobs:
           ${{ runner.os }}-nuget-
 
     - name: Restore dependencies
-      run: dotnet restore VideoDownloaderTelegramBot/VideoDownloaderTelegramBot.csproj
+      run: dotnet restore VideoDownloaderTelegramBot.sln
 
     - name: Build
       run: dotnet build VideoDownloaderTelegramBot/VideoDownloaderTelegramBot.csproj --configuration Release --no-restore
