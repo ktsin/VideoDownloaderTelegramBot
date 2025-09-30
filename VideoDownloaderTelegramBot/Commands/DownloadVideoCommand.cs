@@ -5,6 +5,7 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using VideoDownloaderTelegramBot.Constants;
+using VideoDownloaderTelegramBot.Services;
 using VideoDownloaderTelegramBot.Services.Interfaces;
 
 namespace VideoDownloaderTelegramBot.Commands;
@@ -36,6 +37,7 @@ public class DownloadVideoCommand(
         }
 
         var platformSupport = urlValidationService.IsSupportedPlatform(messageText);
+        
         if (!platformSupport)
         {
             var supportedPlatforms = urlValidationService.GetSupportedPlatformsList();
@@ -46,25 +48,37 @@ public class DownloadVideoCommand(
             return;
         }
 
-        var downloadResult = await videoDownloadService.DownloadVideoAsync(messageText, cancellationToken);
+        var downloadResult = await videoDownloadService.DownloadVideoAsync(messageText, message.From?.Id ?? long.MinValue, cancellationToken);
+        
         if (downloadResult is { Success: true, FilePath: not null })
         {
-            await using (var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            if (!string.IsNullOrWhiteSpace(downloadResult.DownloadUrl))
             {
-                await client.SendVideo(
-                    chatId: chatId,
-                    video: InputFile.FromStream(fileStream),
+                await client.SendMessage(
+                    chatId,
+                    string.Format(BotMessages.FileTooLargeForTelegram, downloadResult.DownloadUrl),
                     messageThreadId: startMessage.MessageThreadId,
                     cancellationToken: cancellationToken);
             }
+            else
+            {
+                await using (var fileStream = new FileStream(downloadResult.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    await client.SendVideo(
+                        chatId: chatId,
+                        video: InputFile.FromStream(fileStream),
+                        messageThreadId: startMessage.MessageThreadId,
+                        cancellationToken: cancellationToken);
+                }
 
-            try
-            {
-                File.Delete(downloadResult.FilePath);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to delete temporary file {FilePath}", downloadResult.FilePath);
+                try
+                {
+                    File.Delete(downloadResult.FilePath);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to delete temporary file {FilePath}", downloadResult.FilePath);
+                }
             }
         }
         else
