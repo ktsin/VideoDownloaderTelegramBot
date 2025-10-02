@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using VideoDownloaderTelegramBot.Data;
-using VideoDownloaderTelegramBot.Models;
+using VideoDownloaderTelegramBot.Db.Data;
+using VideoDownloaderTelegramBot.Db.Entities;
 
 namespace VideoDownloaderTelegramBot.Services;
 

@@ -1,4 +1,4 @@
-namespace VideoDownloaderTelegramBot.Models;
+namespace VideoDownloaderTelegramBot.Db.Entities;
 
 /// <summary>
 /// Represents a downloaded video file stored in the system

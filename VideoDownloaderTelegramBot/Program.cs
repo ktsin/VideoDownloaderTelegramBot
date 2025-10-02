@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using VideoDownloaderTelegramBot;
 using VideoDownloaderTelegramBot.Commands;
-using VideoDownloaderTelegramBot.Data;
+using VideoDownloaderTelegramBot.Db.Data;
 using VideoDownloaderTelegramBot.Endpoints;
 using VideoDownloaderTelegramBot.Services;
 using VideoDownloaderTelegramBot.Services.Interfaces;
@@ -20,7 +20,10 @@ Directory.CreateDirectory(databasePath);
 var connectionString = $"Data Source={Path.Combine(databasePath, "videodownloader.db")}";
 
 builder.Services.AddDbContext<VideoDownloaderDbContext>(options =>
-    options.UseSqlite(connectionString));
+    options.UseSqlite(connectionString,
+        providerOptions =>
+            providerOptions.MigrationsAssembly(typeof(VideoDownloaderTelegramBot.Migrations.AssemblyMoniker)
+                .Assembly)));
 
 // Register services
 builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botToken));

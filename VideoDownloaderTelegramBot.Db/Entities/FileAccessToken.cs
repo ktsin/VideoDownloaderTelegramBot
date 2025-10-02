@@ -1,4 +1,4 @@
-namespace VideoDownloaderTelegramBot.Models;
+namespace VideoDownloaderTelegramBot.Db.Entities;
 
 /// <summary>
 /// Represents a temporary access token for downloading a file

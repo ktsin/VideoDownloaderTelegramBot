@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using VideoDownloaderTelegramBot.Data;
+using VideoDownloaderTelegramBot.Db.Data;
 
 namespace VideoDownloaderTelegramBot.Migrations;
 
