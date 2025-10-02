@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using VideoDownloaderTelegramBot.Data;
+using VideoDownloaderTelegramBot.Db.Data;
 
 namespace VideoDownloaderTelegramBot.Services;
 

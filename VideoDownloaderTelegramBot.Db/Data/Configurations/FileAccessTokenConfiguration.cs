@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using VideoDownloaderTelegramBot.Models;
+using VideoDownloaderTelegramBot.Db.Entities;
 
-namespace VideoDownloaderTelegramBot.Data.Configurations;
+namespace VideoDownloaderTelegramBot.Db.Data.Configurations;
 
 /// <summary>
 /// Entity configuration for FileAccessToken
