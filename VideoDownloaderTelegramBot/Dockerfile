@@ -1,11 +1,15 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 
 # Install python3, pip, and youtube-dl
-RUN apt update && apt install -y \
+RUN apt-get update && apt-get install -y \
     python3-full \
     python3-pip \
     ffmpeg \
+    curl \
+    unzip \
     && pip3 install --break-system-packages -U --pre "yt-dlp[default]"
+
+RUN curl -fsSL https://deno.land/install.sh | sh
 
 USER $APP_UID
 WORKDIR /app
