@@ -9,7 +9,9 @@ RUN apt-get update && apt-get install -y \
     unzip \
     && pip3 install --break-system-packages -U --pre "yt-dlp[default]"
 
+ENV DENO_INSTALL=/usr/local
 RUN curl -fsSL https://deno.land/install.sh | sh
+ENV PATH="${DENO_INSTALL}/bin:${PATH}"
 
 USER $APP_UID
 WORKDIR /app
