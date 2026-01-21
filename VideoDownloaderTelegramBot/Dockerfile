@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     curl \
     unzip \
-    && pip3 install --break-system-packages -U --pre "yt-dlp[default]"
+    && pip3 install --break-system-packages -U --pre "yt-dlp[default,curl-cffi]"
 
 ENV DENO_INSTALL=/usr/local
 RUN curl -fsSL https://deno.land/install.sh | sh
