@@ -10,19 +10,19 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="System.Collections.Immutable" Version="10.0.0" />
+        <PackageReference Include="System.Collections.Immutable" Version="10.0.2" />
         <PackageReference Include="Quartz.OpenTelemetry.Instrumentation" Version="3.15.1" />
         <PackageReference Include="Quartz.Serialization.Json" Version="3.15.1" />
         <PackageReference Include="Quartz.Serialization.SystemTextJson" Version="3.15.1" />
-        <PackageReference Include="Telegram.Bot" Version="22.7.5" />
+        <PackageReference Include="Telegram.Bot" Version="22.8.1" />
         <PackageReference Include="Quartz" Version="3.15.1" />
         <PackageReference Include="Quartz.Extensions.Hosting" Version="3.15.1" />
-        <PackageReference Include="YoutubeDLSharp" Version="1.1.2" />
+        <PackageReference Include="YoutubeDLSharp" Version="1.2.0" />
     </ItemGroup>
 
     <ItemGroup>

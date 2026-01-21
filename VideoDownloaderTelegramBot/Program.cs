@@ -45,7 +45,9 @@ builder.Services.AddSingleton<YoutubeDL>(_ =>
 
     var ytdlwrapper = new YoutubeDL
     {
-        YoutubeDLPath = ytdlPath
+        YoutubeDLPath = ytdlPath,
+        
+        
     };
 
     return ytdlwrapper;
