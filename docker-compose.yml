@@ -1,0 +1,44 @@
+services:
+  videodownloader-bot:
+    image: ghcr.io/ktsin/videodownloadertelegrambot:latest
+    pull_policy: always
+    container_name: videodownloader-telegrambot
+    env_file:
+      - .env
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Telegram Bot Configuration
+      - TelegramBot__Token=${TELEGRAM_BOT_TOKEN}
+
+      # Video Download Configuration
+      - VideoDownload__Path=/video-downloads
+      - VideoDownload__MaxVideoSizeMB=50M
+
+      # File Storage Configuration
+      - FileStorage__HostUrl=${HOST_URL:-http://localhost:8080}
+      - FileStorage__DatabasePath=/app/storage/database
+      - FileStorage__TokenExpirationMinutes=${TOKEN_EXPIRATION_MINUTES:-60}
+      - FileStorage__FileRetentionHours=${FILE_RETENTION_HOURS:-2}
+
+      # Logging Configuration
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+    volumes:
+      # Database persistence
+      - database-data:/app/storage/database
+      # Video downloads (temporary storage)
+      - video-downloads:/video-downloads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  database-data:
+    driver: local
+  video-downloads:
+    driver: local
