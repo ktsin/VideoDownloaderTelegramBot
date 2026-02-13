@@ -38,7 +38,9 @@ public class VideoDownloadService : IVideoDownloadService
                 Output = Path.Combine(_downloadPath, "%(title)s.%(ext)s"),
                 RestrictFilenames = true,
                 NoPlaylist = true,
-                MaxFilesize = _downloadSizeLimit
+                MaxFilesize = _downloadSizeLimit,
+                PostprocessorArgs = "ffmpeg:-c:v libx264 -c:a aac -q:v 5",
+                RecodeVideo = VideoRecodeFormat.Mp4
             };
 
             _logger.LogInformation("Starting video download from {Url}", url);
