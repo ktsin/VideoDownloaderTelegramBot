@@ -34,7 +34,7 @@ public class VideoDownloadService : IVideoDownloadService
         {
             var options = new OptionSet
             {
-                Format = "best[height<=1080]/best",
+                Format = "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
                 Output = Path.Combine(_downloadPath, "%(title)s.%(ext)s"),
                 RestrictFilenames = true,
                 NoPlaylist = true,
