@@ -16,6 +16,7 @@ public class VideoDownloaderDbContext : DbContext
 
     public DbSet<VideoFile> VideoFiles { get; set; }
     public DbSet<FileAccessToken> FileAccessTokens { get; set; }
+    public DbSet<TelegramSubscriber> TelegramSubscribers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,5 +24,6 @@ public class VideoDownloaderDbContext : DbContext
 
         modelBuilder.ApplyConfiguration(new VideoFileConfiguration());
         modelBuilder.ApplyConfiguration(new FileAccessTokenConfiguration());
+        modelBuilder.ApplyConfiguration(new TelegramSubscriberConfiguration());
     }
 }

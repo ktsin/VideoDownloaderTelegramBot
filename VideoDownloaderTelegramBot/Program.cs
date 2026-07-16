@@ -1,7 +1,16 @@
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http;
+using Microsoft.FluentUI.AspNetCore.Components;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using VideoDownloaderTelegramBot;
+using VideoDownloaderTelegramBot.Auth;
 using VideoDownloaderTelegramBot.Commands;
+using VideoDownloaderTelegramBot.Components;
 using VideoDownloaderTelegramBot.Db.Data;
 using VideoDownloaderTelegramBot.Endpoints;
 using VideoDownloaderTelegramBot.Services;
@@ -54,6 +63,38 @@ builder.Services.AddSingleton<YoutubeDL>(_ =>
 });
 
 
+// Admin credentials — fail-fast at startup
+var adminUser = builder.Configuration["INIT_WEB_ADMIN_MASTER_USER"];
+if (string.IsNullOrWhiteSpace(adminUser))
+    throw new InvalidOperationException("INIT_WEB_ADMIN_MASTER_USER is not set");
+var adminPwd = builder.Configuration["INIT_WEB_ADMIN_MASTER_PWD"];
+if (string.IsNullOrWhiteSpace(adminPwd))
+    throw new InvalidOperationException("INIT_WEB_ADMIN_MASTER_PWD is not set");
+builder.Services.AddSingleton(new AdminCredentials(adminUser, adminPwd));
+
+// Cookie authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath         = "/login";
+        options.AccessDeniedPath  = "/login";
+        options.ExpireTimeSpan    = TimeSpan.FromHours(8);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly   = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite   = SameSiteMode.Strict;
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+
+// Blazor Server + FluentUI
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+builder.Services.AddFluentUIComponents();
+
+// Admin service
+builder.Services.AddScoped<IAdminService, AdminService>();
+
 var app = builder.Build();
 
 // Ensure database is created and migrations are applied
@@ -65,5 +106,38 @@ using (var scope = app.Services.CreateScope())
 
 // Map endpoints
 app.MapFileDownloadEndpoints();
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseAntiforgery();
+
+// Login: static form POST — avoids Blazor/SignalR HttpContext limitation
+app.MapPost("/login", async (
+    HttpContext context,
+    AdminCredentials creds,
+    [FromForm] string username,
+    [FromForm] string password) =>
+{
+    if (username == creds.Username && password == creds.Password)
+    {
+        var claims = new[] { new Claim(ClaimTypes.Name, username) };
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        await context.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(identity));
+        return Results.Redirect("/admin");
+    }
+    return Results.Redirect("/login?error=1");
+});
+
+app.MapPost("/logout", async (HttpContext context, IAntiforgery antiforgery) =>
+{
+    await antiforgery.ValidateRequestAsync(context);
+    await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    return Results.Redirect("/login");
+}).RequireAuthorization();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 await app.RunAsync();

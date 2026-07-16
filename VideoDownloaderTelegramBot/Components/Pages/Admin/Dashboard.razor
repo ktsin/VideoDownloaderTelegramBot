@@ -1,0 +1,54 @@
+@page "/admin"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IAdminService AdminService
+
+<h1>Dashboard</h1>
+
+@if (_loaded)
+{
+    <FluentStack Wrap="true" HorizontalGap="16" VerticalGap="16" Style="margin-top: 1rem;">
+        <FluentCard Style="min-width: 200px; padding: 1.5rem;">
+            <div style="font-size: 2rem; font-weight: bold;">@_subscribers</div>
+            <div>Subscribers</div>
+        </FluentCard>
+        <FluentCard Style="min-width: 200px; padding: 1.5rem;">
+            <div style="font-size: 2rem; font-weight: bold;">@_files</div>
+            <div>Stored Files</div>
+        </FluentCard>
+        <FluentCard Style="min-width: 200px; padding: 1.5rem;">
+            <div style="font-size: 2rem; font-weight: bold;">@FormatBytes(_disk.UsedBytes)</div>
+            <div>Disk Used</div>
+        </FluentCard>
+    </FluentStack>
+}
+else
+{
+    <FluentProgressRing />
+}
+
+@code {
+    private bool _loaded;
+    private int _subscribers;
+    private int _files;
+    private DiskUsageDto _disk = new(0, 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var subscribers = await AdminService.GetAllSubscribersAsync();
+        var files = await AdminService.GetAvailableFilesAsync();
+        _disk = await AdminService.GetDiskUsageAsync();
+
+        _subscribers = subscribers.Count;
+        _files = files.Count;
+        _loaded = true;
+    }
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        >= 1_073_741_824 => $"{bytes / 1_073_741_824.0:F1} GB",
+        >= 1_048_576     => $"{bytes / 1_048_576.0:F1} MB",
+        >= 1_024         => $"{bytes / 1_024.0:F1} KB",
+        _                => $"{bytes} B"
+    };
+}

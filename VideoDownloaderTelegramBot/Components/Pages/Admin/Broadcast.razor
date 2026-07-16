@@ -1,0 +1,63 @@
+@page "/admin/broadcast"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IAdminService AdminService
+@inject ILogger<Broadcast> Logger
+
+<h1>Broadcast Message</h1>
+
+<div style="max-width: 600px;">
+    <FluentTextArea @bind-Value="_text" Label="Message" Rows="5" Style="width: 100%; margin-bottom: 1rem;" />
+    <FluentButton Appearance="Appearance.Accent"
+                  Disabled="@(string.IsNullOrWhiteSpace(_text) || _sending)"
+                  OnClick="SendAsync">
+        @(_sending ? "Sending..." : "Send to All Subscribers")
+    </FluentButton>
+</div>
+
+@if (_success)
+{
+    <FluentMessageBar Intent="MessageIntent.Success" Style="margin-top: 1rem;">
+        Broadcast sent successfully.
+    </FluentMessageBar>
+}
+
+@if (_error)
+{
+    <FluentMessageBar Intent="MessageIntent.Error" Style="margin-top: 1rem;">
+        @_errorMessage
+    </FluentMessageBar>
+}
+
+@code {
+    private string _text = string.Empty;
+    private bool _sending;
+    private bool _success;
+    private bool _error;
+    private string _errorMessage = string.Empty;
+
+    private async Task SendAsync()
+    {
+        _sending = true;
+        _success = false;
+        _error = false;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            await AdminService.BroadcastMessageAsync(_text);
+            _text = string.Empty;
+            _success = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error broadcasting message");
+            _error = true;
+            _errorMessage = $"Error sending broadcast: {ex.Message}";
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+}

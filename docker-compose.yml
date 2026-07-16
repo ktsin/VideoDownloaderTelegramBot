@@ -22,6 +22,10 @@ services:
       - FileStorage__TokenExpirationMinutes=${TOKEN_EXPIRATION_MINUTES:-60}
       - FileStorage__FileRetentionHours=${FILE_RETENTION_HOURS:-2}
 
+      # Admin Web UI
+      - INIT_WEB_ADMIN_MASTER_USER=${ADMIN_USERNAME}
+      - INIT_WEB_ADMIN_MASTER_PWD=${ADMIN_PASSWORD}
+
       # Logging Configuration
       - Logging__LogLevel__Default=Information
       - Logging__LogLevel__Microsoft.AspNetCore=Warning
