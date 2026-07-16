@@ -1,0 +1,76 @@
+@page "/admin/files"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IAdminService AdminService
+@inject ILogger<Files> Logger
+
+<h1>Stored Files</h1>
+
+@if (_files is null)
+{
+    <FluentProgressRing />
+}
+else if (_files.Count == 0)
+{
+    <p>No files stored.</p>
+}
+else
+{
+    <FluentDataGrid Items="@_files.AsQueryable()">
+        <PropertyColumn Property="@(f => f.FileName)" Title="File Name" />
+        <PropertyColumn Property="@(f => f.SourceUrl)" Title="Source URL" />
+        <TemplateColumn Title="Size">@FormatBytes(context.FileSizeBytes)</TemplateColumn>
+        <TemplateColumn Title="Created">@context.CreatedAt.ToShortDateString()</TemplateColumn>
+        <TemplateColumn Title="Expires">@context.ExpiresAt.ToShortDateString()</TemplateColumn>
+        <TemplateColumn Title="">
+            <FluentButton Appearance="Appearance.Outline"
+                          OnClick="@(() => DeleteFileAsync(context.Id))">
+                Delete
+            </FluentButton>
+        </TemplateColumn>
+    </FluentDataGrid>
+}
+
+@if (_message is not null)
+{
+    <FluentMessageBar Intent="@(_hasError ? MessageIntent.Error : MessageIntent.Success)" Style="margin-top: 1rem;">@_message</FluentMessageBar>
+}
+
+@code {
+    private List<VideoFileDto>? _files;
+    private string? _message;
+    private bool _hasError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _files = await AdminService.GetAvailableFilesAsync();
+    }
+
+    private async Task DeleteFileAsync(int id)
+    {
+        _message = null;
+        _hasError = false;
+        try
+        {
+            await AdminService.DeleteFileAsync(id);
+            _message = "File deleted.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to delete file with id {FileId}", id);
+            _hasError = true;
+            _message = $"Delete failed: {ex.Message}";
+        }
+    }
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        >= 1_073_741_824 => $"{bytes / 1_073_741_824.0:F1} GB",
+        >= 1_048_576     => $"{bytes / 1_048_576.0:F1} MB",
+        >= 1_024         => $"{bytes / 1_024.0:F1} KB",
+        _                => $"{bytes} B"
+    };
+}

@@ -1,0 +1,36 @@
+@inherits LayoutComponentBase
+
+<FluentLayout>
+    <FluentHeader>
+        <h3>Video Downloader Admin</h3>
+    </FluentHeader>
+    <FluentStack Orientation="Orientation.Horizontal" Style="height: 100%;">
+        <FluentNavMenu Width="220">
+            <FluentNavLink Href="/admin" Match="NavLinkMatch.All">Dashboard</FluentNavLink>
+            <FluentNavLink Href="/admin/files">Files</FluentNavLink>
+            <FluentNavLink Href="/admin/subscribers">Subscribers</FluentNavLink>
+            <FluentNavLink Href="/admin/broadcast">Broadcast</FluentNavLink>
+            <FluentNavLink Href="/admin/notify">Notify User</FluentNavLink>
+            <form action="/logout" method="post" style="width: 100%;">
+                <AntiforgeryToken />
+                <FluentButton Appearance="Appearance.Stealth" Type="ButtonType.Submit" Style="width: 100%; justify-content: flex-start; padding-left: 24px;">Sign Out</FluentButton>
+            </form>
+        </FluentNavMenu>
+        <FluentBodyContent>
+            <div style="padding: 1rem;">
+                @Body
+            </div>
+        </FluentBodyContent>
+    </FluentStack>
+</FluentLayout>
+
+<FluentToastProvider />
+<FluentDialogProvider />
+<FluentTooltipProvider />
+<FluentMessageBarProvider />
+<FluentMenuProvider />
+
+@code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+}

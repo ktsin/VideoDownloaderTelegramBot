@@ -1,0 +1,59 @@
+@page "/admin/notify"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IAdminService AdminService
+
+<h1>Notify User</h1>
+
+<div style="max-width: 600px;">
+    <FluentNumberField @bind-Value="_userId" Label="Telegram User ID" Style="width: 100%; margin-bottom: 1rem;" />
+    <FluentTextArea @bind-Value="_text" Label="Message" Rows="5" Style="width: 100%; margin-bottom: 1rem;" />
+    <FluentButton Appearance="Appearance.Accent"
+                  Disabled="@(_userId == 0 || string.IsNullOrWhiteSpace(_text) || _sending)"
+                  OnClick="SendAsync">
+        @(_sending ? "Sending..." : "Send Message")
+    </FluentButton>
+</div>
+
+@if (_success)
+{
+    <FluentMessageBar Intent="MessageIntent.Success" Style="margin-top: 1rem;">
+        Message sent successfully.
+    </FluentMessageBar>
+}
+@if (_error is not null)
+{
+    <FluentMessageBar Intent="MessageIntent.Error" Style="margin-top: 1rem;">
+        @_error
+    </FluentMessageBar>
+}
+
+@code {
+    private long _userId;
+    private string _text = string.Empty;
+    private bool _sending;
+    private bool _success;
+    private string? _error;
+
+    private async Task SendAsync()
+    {
+        _sending = true;
+        _success = false;
+        _error = null;
+        try
+        {
+            await AdminService.SendMessageToUserAsync(_userId, _text);
+            _text = string.Empty;
+            _userId = 0;
+            _success = true;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to send message: {ex.Message}";
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+}

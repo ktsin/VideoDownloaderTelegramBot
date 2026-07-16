@@ -1,0 +1,35 @@
+@page "/admin/subscribers"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IAdminService AdminService
+
+<h1>Subscribers</h1>
+
+@if (_subscribers is null)
+{
+    <FluentProgressRing />
+}
+else if (_subscribers.Count == 0)
+{
+    <p>No subscribers yet.</p>
+}
+else
+{
+    <FluentDataGrid Items="@_subscribers.AsQueryable()">
+        <PropertyColumn Property="@(s => s.TelegramUserId)" Title="User ID" />
+        <PropertyColumn Property="@(s => s.Username)" Title="Username" />
+        <PropertyColumn Property="@(s => s.FirstName)" Title="First Name" />
+        <PropertyColumn Property="@(s => s.LastName)" Title="Last Name" />
+        <TemplateColumn Title="First Seen">@context.FirstSeenAt.ToShortDateString()</TemplateColumn>
+        <TemplateColumn Title="Last Seen">@context.LastSeenAt.ToShortDateString()</TemplateColumn>
+    </FluentDataGrid>
+}
+
+@code {
+    private List<SubscriberDto>? _subscribers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _subscribers = await AdminService.GetAllSubscribersAsync();
+    }
+}

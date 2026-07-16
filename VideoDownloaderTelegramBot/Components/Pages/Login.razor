@@ -1,0 +1,30 @@
+@page "/login"
+@layout LoginLayout
+
+<FluentCard Style="width: 360px; padding: 2rem;">
+    <h2>Admin Login</h2>
+    @if (_hasError)
+    {
+        <FluentMessageBar Intent="MessageIntent.Error" Style="margin-bottom: 1rem;">
+            Invalid credentials.
+        </FluentMessageBar>
+    }
+    <form method="post" action="/login">
+        <AntiforgeryToken />
+        <FluentTextField name="username" Label="Username" Required="true" Style="width: 100%; margin-bottom: 1rem;" />
+        <FluentTextField name="password" Label="Password" TextFieldType="TextFieldType.Password" Required="true" Style="width: 100%; margin-bottom: 1.5rem;" />
+        <FluentButton Type="ButtonType.Submit" Appearance="Appearance.Accent" Style="width: 100%;">Sign In</FluentButton>
+    </form>
+</FluentCard>
+
+@code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    private bool _hasError;
+
+    protected override void OnInitialized()
+    {
+        _hasError = HttpContext?.Request.Query.ContainsKey("error") == true;
+    }
+}
