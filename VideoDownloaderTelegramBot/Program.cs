@@ -97,6 +97,8 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 
 var app = builder.Build();
 
+app.UseStaticFiles();
+
 // Ensure database is created and migrations are applied
 using (var scope = app.Services.CreateScope())
 {

@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Video Downloader Admin</title>
-    <HeadOutlet />
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <base href="/" />
+    <title>Admin Panel</title>
+    <link href="/_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" rel="stylesheet"/>
+    <link href="/VideoDownloaderTelegramBot.styles.css" rel="stylesheet"/>
+    <HeadOutlet/>
 </head>
 <body>
     <CascadingAuthenticationState>
-        <Routes />
+        <Routes/>
     </CascadingAuthenticationState>
-    <script src="_framework/blazor.server.js"></script>
+    <script src="/_framework/blazor.server.js"></script>
+
+    <script src="/_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js"
+            type="module" async></script>
 </body>
 </html>

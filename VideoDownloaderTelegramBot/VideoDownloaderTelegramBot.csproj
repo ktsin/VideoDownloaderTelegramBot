@@ -34,6 +34,9 @@
       <Content Include="..\docker-compose.yml">
         <Link>docker-compose.yml</Link>
       </Content>
+      <Content Update="wwwroot\dummy.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
     <ItemGroup>

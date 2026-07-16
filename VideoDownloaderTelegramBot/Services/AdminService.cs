@@ -59,6 +59,7 @@ public class AdminService(
             {
                 await botClient.SendMessage(userId, text, cancellationToken: ct);
                 await Task.Delay(35, ct); // ~28 msg/s
+                logger.LogInformation("Broadcasted to {userId} successfully", userId);
             }
             catch (Exception ex)
             {
