@@ -15,7 +15,7 @@ services:
       # Video Download Configuration
       - VideoDownload__Path=/video-downloads
       - VideoDownload__MaxVideoSizeMB=50M
-      - VideoDownload__CookiesFilePath=${COOKIES_FILE_PATH:+/app/cookies.txt}
+      - VideoDownload__CookiesFilePath=${COOKIES_FILE_PATH:+/app/cookies-seed.txt}
 
       # File Storage Configuration
       - FileStorage__HostUrl=${HOST_URL:-http://localhost:8080}
@@ -35,9 +35,11 @@ services:
       - database-data:/app/storage/database
       # Video downloads (temporary storage)
       - video-downloads:/video-downloads
-      # Session cookies file for yt-dlp (Netscape format), optional.
+      # Session cookies seed file for yt-dlp (Netscape format), read-only, optional.
       # Set COOKIES_FILE_PATH on the host to enable; leave unset to mount a no-op file.
-      - ${COOKIES_FILE_PATH:-/dev/null}:/app/cookies.txt:ro
+      # The app copies this into a writable working file inside the video-downloads
+      # volume, since yt-dlp needs to refresh cookies (session/CSRF) as it runs.
+      - ${COOKIES_FILE_PATH:-/dev/null}:/app/cookies-seed.txt:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080"]
       interval: 30s
