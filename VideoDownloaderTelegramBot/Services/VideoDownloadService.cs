@@ -12,6 +12,7 @@ public class VideoDownloadService : IVideoDownloadService
     private readonly FileStorageService _fileStorageService;
     private readonly string _downloadPath;
     private readonly string _downloadSizeLimit;
+    private readonly string? _cookiesFilePath;
 
     public VideoDownloadService(
         YoutubeDL ytdl,
@@ -23,9 +24,76 @@ public class VideoDownloadService : IVideoDownloadService
         _logger = logger;
         _fileStorageService = fileStorageService;
         _downloadPath = configuration["VideoDownload:Path"] ?? Path.Combine(Path.GetTempPath(), "bot_downloads");
-        _downloadSizeLimit = configuration["VideoDownload:SizeLimit"] ?? "100M";
+        _downloadSizeLimit = configuration["VideoDownload:SizeLimit"] ?? "10G";
+
+        var cookiesSeedPath = configuration["VideoDownload:CookiesFilePath"];
+        if (!string.IsNullOrWhiteSpace(cookiesSeedPath))
+        {
+            var cookiesWorkingPath = configuration["VideoDownload:CookiesWorkingPath"]
+                ?? Path.Combine(_downloadPath, "cookies.txt");
+
+            _cookiesFilePath = PrepareCookiesFile(cookiesSeedPath, cookiesWorkingPath);
+        }
 
         Directory.CreateDirectory(_downloadPath);
+    }
+
+    /// <summary>
+    /// yt-dlp reads the cookies file at startup and writes refreshed session/CSRF cookies
+    /// back to it after each run, so it needs a writable copy. To avoid granting write
+    /// access to the read-only host-provided seed file, we copy it into a writable working
+    /// file (re-copying only when the seed has been updated more recently) and hand yt-dlp
+    /// that working copy instead.
+    /// </summary>
+    private string? PrepareCookiesFile(string seedPath, string workingPath)
+    {
+        if (!File.Exists(seedPath))
+        {
+            _logger.LogWarning("VideoDownload:CookiesFilePath is set to {Path} but the file does not exist; continuing without cookies", seedPath);
+            return null;
+        }
+
+        if (!TryOpenFile(seedPath, FileAccess.Read))
+        {
+            _logger.LogError("VideoDownload:CookiesFilePath at {Path} could not be read; continuing without cookies", seedPath);
+            return null;
+        }
+
+        try
+        {
+            if (!File.Exists(workingPath) || File.GetLastWriteTimeUtc(seedPath) > File.GetLastWriteTimeUtc(workingPath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(workingPath)!);
+                File.Copy(seedPath, workingPath, overwrite: true);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError(ex, "Failed to provision writable cookies file at {WorkingPath} from seed {SeedPath}", workingPath, seedPath);
+            return null;
+        }
+
+        if (!TryOpenFile(workingPath, FileAccess.ReadWrite))
+        {
+            _logger.LogError("Cookies working file at {Path} is not readable/writable; continuing without cookies", workingPath);
+            return null;
+        }
+
+        return workingPath;
+    }
+
+    private bool TryOpenFile(string path, FileAccess access)
+    {
+        try
+        {
+            using var stream = File.Open(path, FileMode.Open, access, FileShare.ReadWrite);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError(ex, "Failed to open file with {Access} access at {Path}", access, path);
+            return false;
+        }
     }
 
     public async Task<VideoDownloadResult> DownloadVideoAsync(string url, long telegramUserId, CancellationToken cancellationToken = default)
@@ -38,7 +106,8 @@ public class VideoDownloadService : IVideoDownloadService
                 Output = Path.Combine(_downloadPath, "%(title)s.%(ext)s"),
                 RestrictFilenames = true,
                 NoPlaylist = true,
-                MaxFilesize = _downloadSizeLimit
+                MaxFilesize = _downloadSizeLimit,
+                Cookies = _cookiesFilePath
             };
 
             _logger.LogInformation("Starting video download from {Url}", url);
