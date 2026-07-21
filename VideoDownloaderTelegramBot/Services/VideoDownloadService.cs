@@ -12,6 +12,7 @@ public class VideoDownloadService : IVideoDownloadService
     private readonly FileStorageService _fileStorageService;
     private readonly string _downloadPath;
     private readonly string _downloadSizeLimit;
+    private readonly string? _cookiesFilePath;
 
     public VideoDownloadService(
         YoutubeDL ytdl,
@@ -23,9 +24,36 @@ public class VideoDownloadService : IVideoDownloadService
         _logger = logger;
         _fileStorageService = fileStorageService;
         _downloadPath = configuration["VideoDownload:Path"] ?? Path.Combine(Path.GetTempPath(), "bot_downloads");
-        _downloadSizeLimit = configuration["VideoDownload:SizeLimit"] ?? "100M";
+        _downloadSizeLimit = configuration["VideoDownload:SizeLimit"] ?? "10G";
+
+        var cookiesFilePath = configuration["VideoDownload:CookiesFilePath"];
+        if (!string.IsNullOrWhiteSpace(cookiesFilePath))
+        {
+            if (!File.Exists(cookiesFilePath))
+            {
+                _logger.LogWarning("VideoDownload:CookiesFilePath is set to {Path} but the file does not exist; continuing without cookies", cookiesFilePath);
+            }
+            else if (TryReadCookiesFile(cookiesFilePath))
+            {
+                _cookiesFilePath = cookiesFilePath;
+            }
+        }
 
         Directory.CreateDirectory(_downloadPath);
+    }
+
+    private bool TryReadCookiesFile(string path)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError(ex, "Failed to read cookies file at {Path}", path);
+            return false;
+        }
     }
 
     public async Task<VideoDownloadResult> DownloadVideoAsync(string url, long telegramUserId, CancellationToken cancellationToken = default)
@@ -38,7 +66,8 @@ public class VideoDownloadService : IVideoDownloadService
                 Output = Path.Combine(_downloadPath, "%(title)s.%(ext)s"),
                 RestrictFilenames = true,
                 NoPlaylist = true,
-                MaxFilesize = _downloadSizeLimit
+                MaxFilesize = _downloadSizeLimit,
+                Cookies = _cookiesFilePath
             };
 
             _logger.LogInformation("Starting video download from {Url}", url);
